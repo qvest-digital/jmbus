@@ -1,9 +1,9 @@
 
 project.ext {
 
-  cfgVersion = "3.2.1"
+  cfgVersion = "3.2.1-tarent-1"
   
-  cfgGroup = "org.openmuc"
+  cfgGroup = "de.tarent.um"
 
   cfgCopyDependencies = true
 
@@ -108,7 +108,7 @@ uploadArchives {
   repositories {
     mavenDeployer {
       pom.project {
-        name "jMBus"
+        name "jMBus-tarent"
         description "jMBus is a library that can be used to implement M-Bus masters or wireless M-Bus receivers that read meters."
         
         licenses {

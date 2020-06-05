@@ -82,6 +82,9 @@ configure(javaProjects) {
 
     jacoco group: 'org.jacoco', name: 'org.jacoco.ant', version: '0.7.9', classifier: 'nodeps'
     jacocoRuntime group: 'org.jacoco', name: 'org.jacoco.agent', version: '0.7.9', classifier: 'runtime'
+
+    compile group: 'com.google.guava', name: 'guava', version: '29.0-jre'
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.65.01'
   }
   
   jar {
@@ -96,7 +99,6 @@ configure(javaProjects) {
       ant.taskdef(name: 'instrument',
                   classname: 'org.jacoco.ant.InstrumentTask',
                   classpath: configurations.jacoco.asPath)
-      
 
       sourceSets.main.output.classesDirs.each{ f ->
         // Copy directories from main source to instrumented path

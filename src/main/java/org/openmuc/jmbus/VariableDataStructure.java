@@ -16,6 +16,11 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import com.google.common.primitives.Bytes;
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.engines.AESEngine;
+import org.bouncycastle.crypto.macs.CMac;
+import org.bouncycastle.crypto.params.KeyParameter;
 
 /**
  * Representation of the data transmitted in RESP-UD (M-Bus) and SND-NR (wM-Bus) messages.
@@ -40,7 +45,16 @@ public class VariableDataStructure {
     /* Extended Link Layer (ELL) (0x8d) specific */
     private byte communicationControl;
     private byte[] sessionNumber;
-    /* End of ELL specific */
+
+    /* AFL specific */
+    private byte aflLen;
+    private byte[] aflFragmentationControlField;
+    private byte aflMessageControlField;
+    private byte[] aflMessageCounter;
+    private byte[] aflAesCmac;
+
+    /* Mode 7 specific */
+    private int mode7keyId;
 
     private EncryptionMode encryptionMode;
     private int numberOfEncryptedBlocks;
@@ -63,11 +77,15 @@ public class VariableDataStructure {
     }
 
     /**
-     * This method is used to
-     * 
+     * This method is used to decode
+     *
      * @throws DecodingException
      */
     public void decode() throws DecodingException {
+        decodeWithOffset(this.offset);
+    }
+
+    public void decodeWithOffset(int offset) throws DecodingException {
         if (!decoded) {
             try {
                 int ciField = readUnsignedByte(buffer, offset);
@@ -81,8 +99,27 @@ public class VariableDataStructure {
                     decodeDataRecords(buffer, offset + 1, length - 1);
                     break;
                 case 0x7a: /* short header */
-                    decodeWithShortHeader();
+                    decodeWithShortHeader(offset);
                     break;
+                case 0x8c:
+                    int headLen0x8c = 2;
+                    decodeExtendedLinkLayer0x8c(buffer, offset + 1); // 2 bytes header
+                    header = Arrays.copyOfRange(buffer, offset, offset + (headLen0x8c+1));
+                    vdr = new byte[length - (headLen0x8c+1)];
+                    System.arraycopy(buffer, offset + 1 + headLen0x8c, vdr, 0, length - (1+headLen0x8c));
+
+                    if ((vdr[0] & 0xff) == 0x78) {
+                        decodeDataRecords(vdr, offset + 1, length - headLen0x8c);
+                    }
+                    else if ((vdr[0] & 0xff) == 0x79) {
+                        decodeShortFrame(vdr, offset + 1, length - headLen0x8c);
+                    }
+                    else if ((vdr[0] & 0xff) == 0x90) {
+                        int bytesRead = decodeAFL(buffer, offset+1+headLen0x8c+1);
+                        decodeWithOffset(offset + 1 + headLen0x8c + 1 + bytesRead);
+                    }
+                    break;
+
                 case 0x8d: /* ELL */
                     decodeExtendedLinkLayer(buffer, offset + 1); // 6 bytes header + CRC
                     header = Arrays.copyOfRange(buffer, offset, offset + 7); // don't include CRC
@@ -120,18 +157,18 @@ public class VariableDataStructure {
         }
     }
 
-    private void decodeWithShortHeader() throws DecodingException {
-        decodeShortHeader(buffer, offset + 1);
+    private void decodeWithShortHeader(int offset) throws DecodingException {
+        int bytesRead = decodeShortHeader(buffer, offset + 1);
 
         switch (encryptionMode) {
         case NONE:
-            decodeDataRecords(buffer, offset + 5, length - 5);
+            decodeDataRecords(buffer, offset + bytesRead + 1, length - (bytesRead + 1));
             break;
         case AES_CBC_IV:
-            decryptAesCbcIv(buffer, offset + 5, numberOfEncryptedBlocks * 16);
+        case AES_CBC_IV_0:
+            decryptAesCbcIv(buffer, offset + bytesRead + 1, numberOfEncryptedBlocks * 16);
             break;
         case AES_128:
-        case AES_CBC_IV_0:
         case DES_CBC:
         case DES_CBC_IV:
         case RESERVED_04:
@@ -181,10 +218,10 @@ public class VariableDataStructure {
             // nothing to do
             break;
         case AES_CBC_IV:
+        case AES_CBC_IV_0:
             decryptMessage(getKey());
             break;
         case AES_128:
-        case AES_CBC_IV_0:
         case DES_CBC:
         case DES_CBC_IV:
         case RESERVED_04:
@@ -235,6 +272,13 @@ public class VariableDataStructure {
         return moreRecordsFollow;
     }
 
+    private void decodeExtendedLinkLayer0x8c(byte[] buffer, int offset) {
+        int i = offset;
+
+        communicationControl = buffer[i++];
+        accessNumber = buffer[i++];
+    }
+
     private void decodeExtendedLinkLayer(byte[] buffer, int offset) {
         int i = offset;
 
@@ -250,17 +294,48 @@ public class VariableDataStructure {
         }
     }
 
-    private void decodeShortHeader(byte[] buffer, int offset) {
+    private int decodeShortHeader(byte[] buffer, int offset) {
         int i = offset;
 
         accessNumber = readUnsignedByte(buffer, i++);
         status = readUnsignedByte(buffer, i++);
         numberOfEncryptedBlocks = (buffer[i++] & 0xf0) >> 4;
         encryptionMode = EncryptionMode.getInstance(buffer[i++] & 0x0f);
+        if (encryptionMode == EncryptionMode.AES_CBC_IV_0) {
+            mode7keyId = buffer[i++] & 0x0f;
+        }
 
         if (msgIsNotEnc(buffer, i)) {
             encryptionMode = EncryptionMode.NONE;
         }
+        return i - offset;
+    }
+
+    private int decodeAFL(byte[] buffer, int offset) throws DecodingException {
+        int i = offset;
+
+        aflLen = buffer[i++];
+        aflFragmentationControlField = new byte[] { buffer[i++], buffer[i++] };
+        if (!cmpByteArray(aflFragmentationControlField, (byte) 0x00, (byte) 0x2c)) {
+            throw new DecodingException("only support AFL with FCL = 0x002c");
+        }
+        aflMessageControlField = buffer[i++];
+        if (aflMessageControlField != (byte) 0x25) {
+            throw new DecodingException("only support AFL with MCL = 0x25");
+        }
+        aflMessageCounter = new byte[] { buffer[i++], buffer[i++], buffer[i++], buffer[i++] };
+        aflAesCmac = new byte[] { buffer[i++], buffer[i++], buffer[i++], buffer[i++], buffer[i++], buffer[i++], buffer[i++], buffer[i++] }; // Big endian
+
+        return 1+2+1+4+8;
+    }
+
+    private static boolean cmpByteArray(byte[]buf, byte... value) {
+        if (buf.length != value.length)
+            return false;
+        for (int i=0; i<buf.length; i++)
+            if (buf[i] != value[i])
+                return false;
+        return true;
     }
 
     private static boolean msgIsNotEnc(byte[] buffer, int i) {
@@ -366,6 +441,9 @@ public class VariableDataStructure {
         case AES_CBC_IV:
             decryptAesCbcIv(key, len);
             break;
+        case AES_CBC_IV_0:
+            decryptAesCbcIv0(key, len);
+            break;
         case AES_128:
             decryptAes128(key, len);
             break;
@@ -397,6 +475,47 @@ public class VariableDataStructure {
         System.arraycopy(result, 0, vdr, 0, len);
     }
 
+    private void decryptAesCbcIv0(byte[] key, final int len) throws DecodingException {
+        byte[] iv = createIv0();
+        byte[] Kenc = calcKeyViaCmac(key, (byte) 0x00);
+
+        byte[] result = AesCrypt.newAesCrypt(Kenc, iv).decrypt(this.vdr, len);
+        if (!(result[0] == 0x2f && result[1] == 0x2f)) {
+            throw new DecodingException(newDecyptionExceptionMsg());
+        }
+        System.arraycopy(result, 0, vdr, 0, len);
+    }
+
+    private byte[] calcKeyViaCmac(byte[] key, byte derivationConstant) {
+        // Master Key according to 9.5.2
+        byte[] MK = key;
+
+        // Derivation Constant according to 9.5.3
+        byte[] D = new byte[] {derivationConstant};
+
+        // Message Counter according to 9.5.4
+        byte[] MC = aflMessageCounter;
+
+        // Meter ID according to 9.5.5
+        byte[] MID = linkLayerSecondaryAddress.getDeviceId().getBytes();
+
+        // Padding according to 9.5.6
+        byte[] cmacInput = Bytes.concat(D, MC, MID);
+        while (cmacInput.length % 16 != 0) {
+            cmacInput = Bytes.concat(cmacInput, new byte[]{0x07});
+        }
+
+        // key calculation according to 9.5.7
+        byte[] cmacResult = new byte[16];
+        BlockCipher cipher = new AESEngine();
+        CMac cmac = new CMac(cipher);
+        cmac.init(new KeyParameter(MK));
+        cmac.update(cmacInput, 0, cmacInput.length);
+        cmac.doFinal(cmacResult, 0);
+
+        return cmacResult;
+    }
+
     private String newDecyptionExceptionMsg() {
         String deviceId = linkLayerSecondaryAddress.getDeviceId().toString();
         String manId = linkLayerSecondaryAddress.getManufacturerId();
@@ -420,6 +539,12 @@ public class VariableDataStructure {
             iv[i] = (byte) accessNumber;
         }
 
+        return iv;
+    }
+
+    private byte[] createIv0() {
+        byte[] iv = new byte[16];
+        Arrays.fill(iv, (byte) 0); // explicit zero, better safe than sorry
         return iv;
     }
 

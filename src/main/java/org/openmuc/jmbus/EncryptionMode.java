@@ -39,7 +39,7 @@ public enum EncryptionMode {
     /**
      * AES 128 with Cipher Block Chaining Mode (CBC) and dynamic key and Initial Vector with 0.<br>
      * TR-03109-1 Anlage Feinspezifikation Drahtlose LMN Schnittstelle-Teil2<br>
-     * Not supported yet.
+     * Implemented by tarent.
      */
     AES_CBC_IV_0(7),
     RESERVED_08(8),
