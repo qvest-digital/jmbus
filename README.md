@@ -1,4 +1,4 @@
-= jMBus
+# jMBus
 
 jMBus is an implementation of the M-Bus wired and wireless protocols. You can use it to program individual M-Bus wired masters or wireless M-Bus receivers that read meters such as gas, water, heat, or electricity meters.
 
@@ -14,9 +14,9 @@ Authors: Dirk Zimmermann
 
 Alumni: Stefan Feuerhahn, Michael Zillgith
 
-== tarent fork
+Original website: https://www.openmuc.org/m-bus/
 
-http://tarent.de
+## [tarent](http://tarent.de) fork
 
 We implemented Encryption Mode 7, along with additional necessary header parsing.
 
