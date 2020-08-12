@@ -118,6 +118,9 @@ public class VariableDataStructure {
                         int bytesRead = decodeAFL(buffer, offset+1+headLen0x8c+1);
                         decodeWithOffset(offset + 1 + headLen0x8c + 1 + bytesRead);
                     }
+                    else {
+                        throw new DecodingException("Unable to parse Extended Link Layer (0x8c). Neither the parsing of data records, a short frame or an AFL header was possible");
+                    }
                     break;
 
                 case 0x8d: /* ELL */
