@@ -103,11 +103,13 @@ public class DataRecordParserTest {
 
         // /* e1101101 Date and time - type F */
         Object[] p9 = { "046d2b117811", Description.DATE_TIME, null, 0, 1295887380035L };
-        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9 };
+
+        // /* e1101101 Date and time - type I */
+        Object[] p10 = { "066d221ae0100100", Description.DATE_TIME, null, 0, 979541194736L };
+        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 };
     }
 
     @Test
-    @Ignore
     @Parameters(method = "testDataRecordsValues")
     public void testDataRecords(String bytesStr, Description desc, DlmsUnit unit, int scaler, Long data)
             throws DecodingException {

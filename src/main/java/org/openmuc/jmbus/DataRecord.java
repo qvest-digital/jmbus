@@ -330,7 +330,7 @@ public class DataRecord {
                 calendar.set(year, mon - 1, day, hour, min, 0);
 
                 if (dst == 1) {
-                    calendar.set(Calendar.DST_OFFSET, 60000);
+                    calendar.set(Calendar.DST_OFFSET, 60000000);
                 }
 
                 dataValue = calendar.getTime();
@@ -349,7 +349,34 @@ public class DataRecord {
             dataValueType = DataValueType.DOUBLE;
             break;
         case 0x06: /* INT48 */
-            if ((buffer[i + 5] & 0x80) == 0x80) {
+            if (dateTypeF) {
+                Calendar calendar = Calendar.getInstance();
+                int sec = (buffer[i++] & 0x3f); // Byte 1: Bit 1-6
+                int min = (buffer[i++] & 0x3f); // Byte 2: Bit 1-6
+
+                int hour = (buffer[i] & 0x1f); // Byte 3: Bit 9-13
+                int dst = (0x80 & buffer[i++]) >> 7; // Byte 3: Bit 16
+
+                int day = (buffer[i] & 0x1f); // Byte 4: Bit 17-21
+                int year1 = (0xe0 & buffer[i++]) >> 5; // Byte 4: Bit 22-24
+
+                int mon = (buffer[i] & 0x0f); // Byte 5: Bit 25-28
+                int year2 = (0xf0 & buffer[i++]) >> 1; // Byte 5: Bit 29-32
+
+                int year = 2001 + year1 + year2;
+
+                calendar.set(year, mon - 1, day, hour, min, sec);
+
+                if (dst == 1) {
+                    calendar.set(Calendar.DST_OFFSET, 60000000);
+                }
+
+                i++;
+
+                dataValue = calendar.getTime();
+                dataValueType = DataValueType.DATE;
+            }
+            else if ((buffer[i + 5] & 0x80) == 0x80) {
                 // negative
                 dataValue = Long
                         .valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8) | ((buffer[i++] & 0xff) << 16)
