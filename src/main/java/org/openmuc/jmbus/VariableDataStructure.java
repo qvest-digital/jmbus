@@ -35,6 +35,7 @@ public class VariableDataStructure {
     private final int offset;
     private final int length;
     private byte[] header = new byte[0];
+    private int headerLen = 0;
     private final SecondaryAddress linkLayerSecondaryAddress;
     private final Map<SecondaryAddress, byte[]> keyMap;
 
@@ -92,7 +93,7 @@ public class VariableDataStructure {
 
                 switch (ciField) {
                 case 0x72:
-                    decodeLongHeaderData();
+                    decodeWithLongHeader(offset);
                     break;
                 case 0x78: /* no header */
                     encryptionMode = EncryptionMode.NONE;
@@ -103,6 +104,7 @@ public class VariableDataStructure {
                     break;
                 case 0x8c:
                     int headLen0x8c = 2;
+                    headerLen += headLen0x8c;
                     decodeExtendedLinkLayer0x8c(buffer, offset + 1); // 2 bytes header
                     header = Arrays.copyOfRange(buffer, offset, offset + (headLen0x8c+1));
                     vdr = new byte[length - (headLen0x8c+1)];
@@ -116,6 +118,7 @@ public class VariableDataStructure {
                     }
                     else if ((vdr[0] & 0xff) == 0x90) {
                         int bytesRead = decodeAFL(buffer, offset+1+headLen0x8c+1);
+                        headerLen += bytesRead;
                         decodeWithOffset(offset + 1 + headLen0x8c + 1 + bytesRead);
                     }
                     else {
@@ -161,35 +164,32 @@ public class VariableDataStructure {
     }
 
     private void decodeWithShortHeader(int offset) throws DecodingException {
-        int bytesRead = decodeShortHeader(buffer, offset + 1);
+        int tplLength = decodeShortHeader(offset + 1);
+        headerLen += tplLength + 1;
+        decodeFromTpl(offset + 1 + tplLength);
+    }
 
+    private void decodeWithLongHeader(int offset) throws DecodingException {
+        int tplLength = decodeLongHeader(offset + 1);
+        headerLen += tplLength + 1;
+        decodeFromTpl(offset + 1 + tplLength);
+    }
+
+    private void decodeFromTpl(int offset) throws DecodingException {
         switch (encryptionMode) {
-        case NONE:
-            decodeDataRecords(buffer, offset + bytesRead + 1, length - (bytesRead + 1));
-            break;
-        case AES_CBC_IV:
-        case AES_CBC_IV_0:
-            decryptAesCbcIv(buffer, offset + bytesRead + 1, numberOfEncryptedBlocks * 16);
-            break;
-        case AES_128:
-        case DES_CBC:
-        case DES_CBC_IV:
-        case RESERVED_04:
-        case RESERVED_06:
-        case RESERVED_08:
-        case RESERVED_09:
-        case RESERVED_10:
-        case RESERVED_11:
-        case RESERVED_12:
-        case RESERVED_14:
-        case RESERVED_15:
-        case TLS:
-        default:
-            throw new DecodingException("Unsupported encryption mode used: " + encryptionMode);
+            case NONE:
+                decodeDataRecords(buffer, offset, length - headerLen);
+                break;
+            case AES_CBC_IV:
+            case AES_CBC_IV_0:
+                decodeWithAesCbcIv(buffer, offset, numberOfEncryptedBlocks * 16);
+                break;
+            default:
+                throw new DecodingException("Unsupported encryption mode used: " + encryptionMode);
         }
     }
 
-    private void decryptAesCbcIv(byte[] buffer, int offset, int encryptedDataLength) throws DecodingException {
+    private void decodeWithAesCbcIv(byte[] buffer, int offset, int encryptedDataLength) throws DecodingException {
         vdr = new byte[encryptedDataLength];
 
         System.arraycopy(buffer, offset, vdr, 0, encryptedDataLength);
@@ -205,43 +205,7 @@ public class VariableDataStructure {
         decodeDataRecords(decryptMessage(key), 0, encryptedDataLength);
     }
 
-    private void decodeLongHeaderData() throws DecodingException {
-        final int headerLength = 13;
-        header = Arrays.copyOfRange(buffer, offset, offset + headerLength);
 
-        secondaryAddress = SecondaryAddress.newFromLongHeader(buffer, offset + 1);
-
-        decodeShortHeader(buffer, offset + 1 + 8);
-
-        vdr = new byte[length - headerLength];
-        System.arraycopy(buffer, offset + headerLength, vdr, 0, length - headerLength);
-
-        switch (encryptionMode) {
-        case NONE:
-            // nothing to do
-            break;
-        case AES_CBC_IV:
-        case AES_CBC_IV_0:
-            decryptMessage(getKey());
-            break;
-        case AES_128:
-        case DES_CBC:
-        case DES_CBC_IV:
-        case RESERVED_04:
-        case RESERVED_06:
-        case RESERVED_08:
-        case RESERVED_09:
-        case RESERVED_10:
-        case RESERVED_11:
-        case RESERVED_12:
-        case RESERVED_14:
-        case RESERVED_15:
-        case TLS:
-        default:
-            throw new DecodingException("Unsupported encryption mode used: " + encryptionMode);
-        }
-        decodeDataRecords(vdr, 0, length - headerLength);
-    }
 
     public SecondaryAddress getSecondaryAddress() {
         return secondaryAddress;
@@ -297,7 +261,7 @@ public class VariableDataStructure {
         }
     }
 
-    private int decodeShortHeader(byte[] buffer, int offset) {
+    private int decodeShortHeader(int offset) {
         int i = offset;
 
         accessNumber = readUnsignedByte(buffer, i++);
@@ -312,6 +276,14 @@ public class VariableDataStructure {
             encryptionMode = EncryptionMode.NONE;
         }
         return i - offset;
+    }
+
+    private int decodeLongHeader(int offset) {
+        final int longHeaderAdditionalLength = 8;
+
+        secondaryAddress = SecondaryAddress.newFromLongHeader(buffer, offset);
+
+        return decodeShortHeader(offset + longHeaderAdditionalLength) + longHeaderAdditionalLength;
     }
 
     private int decodeAFL(byte[] buffer, int offset) throws DecodingException {
