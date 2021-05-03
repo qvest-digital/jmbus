@@ -168,6 +168,7 @@ public class DataRecord {
     private byte[] dib;
     // // Value Information Block that contains a VIF and optionally up to 10 VIFEs
     private byte[] vib;
+    private byte[] rawData;
 
     private Object dataValue;
     private DataValueType dataValueType;
@@ -409,7 +410,7 @@ public class DataRecord {
                 throw new DecodingException("Unsupported LVAR Field: " + variableLength);
             }
 
-            byte[] rawData = new byte[dataLength0x0d];
+            rawData = new byte[dataLength0x0d];
 
             for (int j = 0; j < dataLength0x0d; j++) {
                 rawData[j] = buffer[i + dataLength0x0d - 1 - j];
@@ -484,6 +485,10 @@ public class DataRecord {
      */
     public byte[] getVib() {
         return vib;
+    }
+
+    public byte[] getRawData() {
+        return rawData;
     }
 
     /**
