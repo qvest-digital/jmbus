@@ -347,15 +347,15 @@ public class DataRecord {
             if (dateTypeF) {
                 Calendar calendar = Calendar.getInstance();
                 int sec = (buffer[i++] & 0x3f); // Byte 1: Bit 1-6
-                int min = (buffer[i++] & 0x3f); // Byte 2: Bit 1-6
+                int min = (buffer[i++] & 0x3f); // Byte 2: Bit 9-14
 
-                int hour = (buffer[i] & 0x1f); // Byte 3: Bit 9-13
+                int hour = (buffer[i] & 0x1f); // Byte 3: Bit 17-21
 
-                int day = (buffer[i] & 0x1f); // Byte 4: Bit 17-21
-                int year1 = (0xe0 & buffer[i++]) >> 5; // Byte 4: Bit 22-24
+                int day = (buffer[i] & 0x1f); // Byte 4: Bit 25-29
+                int year1 = (0xe0 & buffer[i++]) >> 5; // Byte 4: Bit 30-32
 
-                int mon = (buffer[i] & 0x0f); // Byte 5: Bit 25-28
-                int year2 = (0xf0 & buffer[i++]) >> 1; // Byte 5: Bit 29-32
+                int mon = (buffer[i] & 0x0f); // Byte 5: Bit 33-36
+                int year2 = (0xf0 & buffer[i++]) >> 1; // Byte 5: Bit 37-40
 
                 int year = 2001 + year1 + year2;
 
