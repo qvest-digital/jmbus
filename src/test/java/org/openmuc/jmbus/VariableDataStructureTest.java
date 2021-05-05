@@ -68,4 +68,28 @@ public class VariableDataStructureTest {
 
         System.out.println(vds);
     }
+
+    @Test
+    public void testExampleLongTPL() throws Exception {
+        String wmbus = "3b4493154433221101378c2037900f002c2538070000fb96fa7024b49331727856341293158103cf00100710533057c271ffcc8a42cb3a46a39f84ae";
+
+        SecondaryAddress linkLayerSecondaryAddress = SecondaryAddress.newFromWMBusHeader(HexUtils.hexToBytes(wmbus), 2);
+
+        String keystring = "00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F".replaceAll(" ", "");
+        final byte[] key = HexUtils.hexToBytes(keystring);
+
+        Map<SecondaryAddress, byte[]> keyMap = new HashMap<>();
+        keyMap.put(linkLayerSecondaryAddress, key);
+
+        byte[] crypted = HexUtils.hexToBytes(wmbus);
+        int offset = 10;
+        VariableDataStructure vds = new VariableDataStructure(crypted, offset, crypted.length-offset, linkLayerSecondaryAddress, keyMap);
+        try {
+            vds.decode();
+        } catch (DecodingException de) {
+            fail("should not throw DecodingException: " + de);
+        }
+
+        System.out.println(vds);
+    }
 }
