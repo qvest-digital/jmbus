@@ -349,7 +349,7 @@ public class DataRecord {
                 int sec = (buffer[i++] & 0x3f); // Byte 1: Bit 1-6
                 int min = (buffer[i++] & 0x3f); // Byte 2: Bit 9-14
 
-                int hour = (buffer[i] & 0x1f); // Byte 3: Bit 17-21
+                int hour = (buffer[i++] & 0x1f); // Byte 3: Bit 17-21
 
                 int day = (buffer[i] & 0x1f); // Byte 4: Bit 25-29
                 int year1 = (0xe0 & buffer[i++]) >> 5; // Byte 4: Bit 30-32
