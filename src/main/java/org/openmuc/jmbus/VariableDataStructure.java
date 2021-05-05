@@ -472,7 +472,12 @@ public class VariableDataStructure {
         byte[] MC = aflMessageCounter;
 
         // Meter ID according to 9.5.5
-        byte[] MID = linkLayerSecondaryAddress.getDeviceId().getBytes();
+        byte[] MID;
+        if (secondaryAddress != null) {
+            MID = secondaryAddress.getDeviceId().getBytes();
+        } else {
+            MID = linkLayerSecondaryAddress.getDeviceId().getBytes();
+        }
 
         // Padding according to 9.5.6
         byte[] cmacInput = Bytes.concat(D, MC, MID);
@@ -500,10 +505,15 @@ public class VariableDataStructure {
     private byte[] createIv() {
         byte[] iv = new byte[16];
         byte[] saBytes = linkLayerSecondaryAddress.asByteArray();
+        boolean isLongHeader = linkLayerSecondaryAddress.isLongHeader();
+        if (secondaryAddress != null) {
+            saBytes = secondaryAddress.asByteArray();
+            isLongHeader = secondaryAddress.isLongHeader();
+        }
 
-        if (linkLayerSecondaryAddress.isLongHeader()) {
-            System.arraycopy(saBytes, 0, iv, 4, 2); // Manufacture
-            System.arraycopy(saBytes, 2, iv, 0, 4); // Identification
+        if (isLongHeader) {
+            System.arraycopy(saBytes, 4, iv, 0, 2); // Manufacture
+            System.arraycopy(saBytes, 0, iv, 2, 4); // Identification
             System.arraycopy(saBytes, 6, iv, 6, 2); // Version and Device Type
         }
         else {

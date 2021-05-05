@@ -71,7 +71,7 @@ public class VariableDataStructureTest {
 
     @Test
     public void testExampleLongTPL() throws Exception {
-        String wmbus = "4b4493157856341233038C2075900F002C25B30A000021924D4F2FB66E0172000000009315330301002007109058475F4BC91DF878B80A1B0F98B629024AAC727942BFC549233C0140829B93";
+        String wmbus = "3b4493154433221101378c2037900f002c2538070000fb96fa7024b49331727856341293158103cf00100710533057c271ffcc8a42cb3a46a39f84ae";
 
         SecondaryAddress linkLayerSecondaryAddress = SecondaryAddress.newFromWMBusHeader(HexUtils.hexToBytes(wmbus), 2);
 
@@ -92,5 +92,4 @@ public class VariableDataStructureTest {
 
         System.out.println(vds);
     }
-
 }
