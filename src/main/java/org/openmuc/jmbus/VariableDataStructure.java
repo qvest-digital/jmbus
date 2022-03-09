@@ -183,6 +183,10 @@ public class VariableDataStructure {
             case AES_CBC_IV:
             case AES_CBC_IV_0:
                 decodeWithAesCbcIv(buffer, offset, numberOfEncryptedBlocks * 16);
+                // if unencrypted data follows also decode that (Note under 7.2.4.3 suggest that this is valid)
+                if (length - headerLen > numberOfEncryptedBlocks * 16) {
+                    decodeDataRecords(buffer, offset + numberOfEncryptedBlocks * 16, length - headerLen - numberOfEncryptedBlocks * 16);
+                }
                 break;
             default:
                 throw new DecodingException("Unsupported encryption mode used: " + encryptionMode);
