@@ -10,8 +10,8 @@ import static org.junit.Assert.assertEquals;
 import java.util.HashMap;
 
 import org.junit.Test;
-import org.openmuc.jmbus.SecondaryAddress;
 import org.openmuc.jmbus.HexUtils;
+import org.openmuc.jmbus.SecondaryAddress;
 
 public class ShortTelegramTest {
 

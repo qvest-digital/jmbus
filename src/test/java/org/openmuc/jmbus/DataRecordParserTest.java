@@ -43,16 +43,67 @@ public class DataRecordParserTest {
         return (Long) obj;
     }
 
+    public Object testINT16Data() {
+        Object[] p1 = { HexUtils.hexToBytes("0203ff7f"), Short.MAX_VALUE };
+        Object[] p2 = { HexUtils.hexToBytes("0203ffff"), -1L };
+        return new Object[] { p1, p2 };
+    }
+
+    public Object testINT24Data() {
+        Object[] p1 = { HexUtils.hexToBytes("0303ffff7f"), 8_388_607L };
+        Object[] p2 = { HexUtils.hexToBytes("0303ffffff"), -1L };
+        return new Object[] { p1, p2 };
+    }
+
     public Object testINT32Data() {
-        Object[] p1 = { HexUtils.hexToBytes("0403e4050000"), 1508L };
+        Object[] p1 = { HexUtils.hexToBytes("0403ffffff7f"), Integer.MAX_VALUE };
         Object[] p2 = { HexUtils.hexToBytes("0403ffffffff"), -1L };
         return new Object[] { p1, p2 };
+    }
+
+    public Object testINT48Data() {
+        Object[] p1 = { HexUtils.hexToBytes("0603ffffffffff7f"), 140737488355327L };
+        Object[] p2 = { HexUtils.hexToBytes("0603ffffffffffff"), -1L };
+        return new Object[] { p1, p2 };
+    }
+
+    public Object testINT64Data() {
+        Object[] p1 = { HexUtils.hexToBytes("0703ffffffffffffff7f"), Long.MAX_VALUE };
+        Object[] p2 = { HexUtils.hexToBytes("0703ffffffffffffffff"), -1L };
+        return new Object[] { p1, p2 };
+    }
+
+    @Test
+    @Parameters(method = "testINT16Data")
+    public void testINT16(byte[] bytes, long expectedVal) throws Exception {
+        testLong(bytes, expectedVal);
+    }
+
+    @Test
+    @Parameters(method = "testINT24Data")
+    public void testINT24(byte[] bytes, long expectedVal) throws Exception {
+        testLong(bytes, expectedVal);
     }
 
     @Test
     @Parameters(method = "testINT32Data")
     public void testINT32(byte[] bytes, long expectedVal) throws Exception {
+        testLong(bytes, expectedVal);
+    }
 
+    @Test
+    @Parameters(method = "testINT48Data")
+    public void testINT48(byte[] bytes, long expectedVal) throws Exception {
+        testLong(bytes, expectedVal);
+    }
+
+    @Test
+    @Parameters(method = "testINT64Data")
+    public void testINT64(byte[] bytes, long expectedVal) throws Exception {
+        testLong(bytes, expectedVal);
+    }
+
+    private void testLong(byte[] bytes, long expectedVal) throws DecodingException {
         DataRecord dataRecord = new DataRecord();
 
         dataRecord.decode(bytes, 0);
@@ -66,7 +117,6 @@ public class DataRecordParserTest {
         Long integer = (Long) obj;
 
         assertEquals(expectedVal, integer.longValue());
-
     }
 
     public Object testDataRecordsValues() throws DecodingException {

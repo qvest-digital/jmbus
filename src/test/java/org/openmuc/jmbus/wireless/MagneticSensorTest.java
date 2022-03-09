@@ -15,8 +15,8 @@ import org.openmuc.jmbus.DataRecord;
 import org.openmuc.jmbus.DataRecord.Description;
 import org.openmuc.jmbus.DecodingException;
 import org.openmuc.jmbus.DeviceType;
-import org.openmuc.jmbus.SecondaryAddress;
 import org.openmuc.jmbus.HexUtils;
+import org.openmuc.jmbus.SecondaryAddress;
 
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;

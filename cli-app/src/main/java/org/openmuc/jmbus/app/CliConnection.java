@@ -20,8 +20,8 @@ import org.openmuc.jrxtx.SerialPortTimeoutException;
 
 class CliConnection {
 
-    private static void printWriteExample() {
-        System.out.println("Example for writing to a meter: \n"
+    private static void printWriteExample(CliPrinter cliPrinter) {
+        cliPrinter.printlnInfo("Example for writing to a meter: \n"
                 + "\tChange primary address: ./jmbus-app.sh write -cp /dev/ttyUSB0 -a <old_primary_address> -dif 01 -vif 7a -data <data_new_primary_address>\n"
                 + "\tExample:\n"
                 + "\t\tChange primary address from 20 to 26: ./jmbus-app.sh write -cp /dev/ttyUSB0 -a 20 -dif 01 -vif 7a -data 1a\n\n"
@@ -32,6 +32,7 @@ class CliConnection {
 
     public static void write(ConsoleLineParser cliParser, MBusConnection mBusConnection, CliPrinter cliPrinter) {
         int primaryAddress = cliParser.getPrimaryAddress();
+        long waitTime = cliParser.getWaitTime();
         SecondaryAddress secondaryAddress = cliParser.getSecondaryAddress();
 
         byte[] data = cliParser.getData();
@@ -39,8 +40,8 @@ class CliConnection {
         byte[] vif = cliParser.getVif();
 
         if (dif.length == 0 || vif.length == 0) {
-            printWriteExample();
-            cliPrinter.printError("No dif or vif setted.", true);
+            printWriteExample(cliPrinter);
+            cliPrinter.printError("No dif or vif set.", true);
         }
 
         VerboseMessageListenerImpl messageListener = new VerboseMessageListenerImpl(cliPrinter);
@@ -49,6 +50,7 @@ class CliConnection {
         if (secondaryAddress != null) {
             try {
                 mBusConnection.selectComponent(secondaryAddress);
+                sleep(waitTime, cliPrinter);
             } catch (SerialPortTimeoutException e) {
                 mBusConnection.close();
                 cliPrinter.printError("Selecting secondary address attempt timed out.");
@@ -63,6 +65,7 @@ class CliConnection {
         byte[] dataRecord = ByteBuffer.allocate(length).put(dif).put(vif).put(data).array();
         try {
             mBusConnection.write(primaryAddress, dataRecord);
+            sleep(waitTime, cliPrinter);
             cliPrinter.printInfo("Data was sent.");
         } catch (SerialPortTimeoutException e) {
             mBusConnection.close();
@@ -72,13 +75,14 @@ class CliConnection {
             cliPrinter.printError("Error writing meter: " + e.getMessage());
         }
 
-        System.out.println();
+        cliPrinter.printlnInfo("");
 
         mBusConnection.close();
     }
 
     public static void read(ConsoleLineParser cliParser, MBusConnection mBusConnection, CliPrinter cliPrinter) {
         int primaryAddress = cliParser.getPrimaryAddress();
+        long waitTime = cliParser.getWaitTime();
         SecondaryAddress secondaryAddress = cliParser.getSecondaryAddress();
 
         List<DataRecord> dataRecordsToSelectForReadout = new LinkedList<>();
@@ -90,6 +94,7 @@ class CliConnection {
         if (secondaryAddress != null) {
             try {
                 mBusConnection.selectComponent(secondaryAddress);
+                sleep(waitTime, cliPrinter);
             } catch (SerialPortTimeoutException e) {
                 mBusConnection.close();
                 cliPrinter.printError("Selecting secondary address attempt timed out.");
@@ -100,9 +105,10 @@ class CliConnection {
             primaryAddress = 0xfd;
         }
         else {
-            if (!cliParser.isLinkResetDisabled() && secondaryAddress == null) {
+            if (!cliParser.isLinkResetDisabled()) {
                 try {
                     mBusConnection.linkReset(primaryAddress);
+                    sleep(waitTime, cliPrinter);
                 } catch (InterruptedIOException e) {
                     mBusConnection.close();
                     cliPrinter.printError("Resetting link (SND_NKE) attempt timed out.");
@@ -110,16 +116,13 @@ class CliConnection {
                     mBusConnection.close();
                     cliPrinter.printError("Error resetting link (SND_NKE): " + e.getMessage());
                 }
-                try {
-                    Thread.sleep(100); // for slow slaves
-                } catch (InterruptedException e) {
-                    cliPrinter.printError("Thread sleep fails.\n" + e.getMessage());
-                }
+                sleep(100 + waitTime, cliPrinter); // for slow slaves
             }
         }
         if (!dataRecordsToSelectForReadout.isEmpty()) {
             try {
                 mBusConnection.selectForReadout(primaryAddress, dataRecordsToSelectForReadout);
+                sleep(waitTime, cliPrinter);
             } catch (InterruptedIOException e) {
                 mBusConnection.close();
                 cliPrinter.printError("Selecting data record for readout timed out.");
@@ -132,6 +135,7 @@ class CliConnection {
         do {
             try {
                 variableDataStructure = mBusConnection.read(primaryAddress);
+                sleep(waitTime, cliPrinter);
             } catch (InterruptedIOException e) {
                 mBusConnection.close();
                 cliPrinter.printError("Read attempt timed out.");
@@ -143,6 +147,7 @@ class CliConnection {
             if (!dataRecordsToSelectForReadout.isEmpty()) {
                 try {
                     mBusConnection.resetReadout(primaryAddress);
+                    sleep(waitTime, cliPrinter);
                 } catch (InterruptedIOException e) {
                     cliPrinter.printError("Resetting meter for standard readout timed out.");
                 } catch (IOException e) {
@@ -150,17 +155,18 @@ class CliConnection {
                 }
             }
 
-            cliPrinter.printInfo(variableDataStructure.toString());
-            cliPrinter.printInfo();
+            cliPrinter.printlnInfo(variableDataStructure.toString());
 
         } while (variableDataStructure.moreRecordsFollow());
 
         mBusConnection.close();
-
     }
 
-    public static void scan(String wildcardMask, boolean scanSecondaryAddress, MBusConnection mBusConnection,
-            CliPrinter cliPrinter) throws IOException {
+    public static void scan(ConsoleLineParser cliParser, MBusConnection mBusConnection, CliPrinter cliPrinter)
+            throws IOException {
+        long waitTime = cliParser.getWaitTime();
+        boolean scanSecondaryAddress = cliParser.isSecondaryScan();
+        String wildcardMask = cliParser.getWildcard();
 
         try {
             mBusConnection.setVerboseMessageListener(new VerboseMessageListenerImpl(cliPrinter));
@@ -168,19 +174,19 @@ class CliConnection {
             cliPrinter.printInfo("Scanning address: \n");
 
             if (scanSecondaryAddress) {
-                mBusConnection.scan(wildcardMask, new SecondaryAddressListenerImpl());
+                mBusConnection.scan(wildcardMask, new SecondaryAddressListenerImpl(cliPrinter), waitTime);
             }
             else {
-                scanPrimaryAddresses(mBusConnection, cliPrinter);
+                scanPrimaryAddresses(mBusConnection, waitTime, cliPrinter);
             }
 
         } finally {
             mBusConnection.close();
         }
-        System.out.println("\nScan finished.");
+        cliPrinter.printInfo("\nScan finished.");
     }
 
-    private static void scanPrimaryAddresses(MBusConnection mBusConnection, CliPrinter cliPrinter) {
+    private static void scanPrimaryAddresses(MBusConnection mBusConnection, long waitTime, CliPrinter cliPrinter) {
         for (int i = 0; i <= 250; i++) {
             if (i % 10 == 0 && i != 0) {
                 cliPrinter.printlnInfo();
@@ -188,25 +194,27 @@ class CliConnection {
             cliPrinter.printInfo(String.format("%3d%c", i, ','));
             try {
                 mBusConnection.linkReset(i);
-                try {
-                    Thread.sleep(50); // for slow slaves
-                } catch (InterruptedException e) {
-                    cliPrinter.printError("\nThread sleep fails.\n" + e.getMessage(), false);
-                }
+                sleep(50 + waitTime, cliPrinter);
+
                 VariableDataStructure vdr = mBusConnection.read(i);
                 cliPrinter.printInfo("\nFound device at primary address :" + i + ", ");
                 cliPrinter.printlnInfo(vdr.getSecondaryAddress());
 
             } catch (InterruptedIOException e) {
-                continue;
+                // do nothing
             } catch (IOException e) {
                 cliPrinter.printlnInfo("\nError reading meter at primary address " + i + ": " + e.getMessage());
-                continue;
             }
         }
     }
 
     static class SecondaryAddressListenerImpl implements SecondaryAddressListener {
+
+        private final CliPrinter cliPrinter;
+
+        public SecondaryAddressListenerImpl(CliPrinter cliPrinter) {
+            this.cliPrinter = cliPrinter;
+        }
 
         @Override
         public void newDeviceFound(SecondaryAddress secondaryAddress) {
@@ -215,8 +223,21 @@ class CliConnection {
 
         @Override
         public void newScanMessage(String message) {
-            System.out.println(message);
+            cliPrinter.printlnInfo(message);
         }
     }
 
+    private static void sleep(long time, CliPrinter cliPrinter) {
+        if (time != 0) {
+            try {
+                Thread.sleep(time);
+            } catch (InterruptedException e) {
+                cliPrinter.printError("Thread sleep fails.\n" + e.getMessage());
+            }
+        }
+    }
+
+    private CliConnection() {
+        // hide the constructor
+    }
 }
