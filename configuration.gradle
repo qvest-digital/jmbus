@@ -1,7 +1,7 @@
 
 project.ext {
 
-  cfgVersion = "3.3.0-tarent-4"
+  cfgVersion = "3.3.0-tarent-5"
   
   cfgGroup = "de.tarent.um"
 
