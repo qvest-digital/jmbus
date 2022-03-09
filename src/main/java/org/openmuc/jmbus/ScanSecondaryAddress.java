@@ -22,7 +22,7 @@ class ScanSecondaryAddress {
     private static byte[] value = new byte[MAX_LENGTH];
 
     public static List<SecondaryAddress> scan(MBusConnection mBusConnection, String wildcardMask,
-            SecondaryAddressListener secondaryAddressListener) throws IOException {
+            SecondaryAddressListener secondaryAddressListener, long waitTime) throws IOException {
 
         List<SecondaryAddress> secondaryAddresses = new LinkedList<>();
 
@@ -50,10 +50,10 @@ class ScanSecondaryAddress {
             SecondaryAddress readSecondaryAddress = null;
 
             if (scanSelection(mBusConnection, secondaryAddessesWildCard)) {
+                sleep(waitTime);
 
                 try {
                     readSecondaryAddress = mBusConnection.read(0xfd).getSecondaryAddress();
-
                 } catch (InterruptedIOException e) {
                     notifyScanMsg(secondaryAddressListener, "Read (REQ_UD2) TimeoutException");
                     collision = false;
@@ -61,6 +61,7 @@ class ScanSecondaryAddress {
                     notifyScanMsg(secondaryAddressListener, "Read (REQ_UD2) IOException / Collision");
                     collision = true;
                 }
+                sleep(waitTime);
 
                 if (collision) {
                     if (pos < 7) {
@@ -115,7 +116,7 @@ class ScanSecondaryAddress {
      * 
      * @param wildcard
      *            secondary address wildcard e.g. f1ffffffffffffff
-     * @return true if any device responsed else false
+     * @return true if any device response else false
      * @throws IOException
      */
     private static boolean scanSelection(MBusConnection mBusConnection, SecondaryAddress wildcard) throws IOException {
@@ -220,6 +221,16 @@ class ScanSecondaryAddress {
      * Don't let anyone instantiate this class.
      */
     private ScanSecondaryAddress() {
+    }
+
+    private static void sleep(long millis) throws IOException {
+        if (millis > 0) {
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException e) {
+                throw new IOException(e);
+            }
+        }
     }
 
 }

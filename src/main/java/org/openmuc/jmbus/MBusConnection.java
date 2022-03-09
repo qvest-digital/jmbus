@@ -9,7 +9,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
@@ -110,20 +109,22 @@ public class MBusConnection implements AutoCloseable {
      * @param secondaryAddressListener
      *            listener to get scan messages and scanned secondary address just at time.<br>
      *            If null, all detected address will only returned if finished.
+     * @param delay
+     *            delay between every sent message. Sometimes needed for slow devices. Deactivated if 0 or less.
      * 
      * @return a list of secondary addresses of all detected devices
      * @throws IOException
      *             if any kind of error (including timeout) occurs while writing to the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
      */
-    public List<SecondaryAddress> scan(String wildcardMask, SecondaryAddressListener secondaryAddressListener)
-            throws IOException {
+    public List<SecondaryAddress> scan(String wildcardMask, SecondaryAddressListener secondaryAddressListener,
+            long delay) throws IOException {
 
         if (wildcardMask == null || wildcardMask.isEmpty()) {
             wildcardMask = "ffffffff";
         }
 
-        return ScanSecondaryAddress.scan(this, wildcardMask, secondaryAddressListener);
+        return ScanSecondaryAddress.scan(this, wildcardMask, secondaryAddressListener, delay);
     }
 
     /**
@@ -133,15 +134,11 @@ public class MBusConnection implements AutoCloseable {
      * @param primaryAddress
      *            the primary address of the meter to read. For secondary address use 0xfd.
      * @return the variable data structure from the received RSP_UD frame
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      * @throws IOException
      *             if any kind of error (including timeout) occurs while trying to read the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public VariableDataStructure read(int primaryAddress) throws IOException, InterruptedIOException {
+    public VariableDataStructure read(int primaryAddress) throws IOException {
         if (transportLayer.isClosed()) {
             throw new IllegalStateException("Port is not open.");
         }
@@ -253,10 +250,8 @@ public class MBusConnection implements AutoCloseable {
      * @throws IOException
      *             if any kind of error (including timeout) occurs while writing to the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public void write(int primaryAddress, byte[] data) throws IOException, InterruptedIOException {
+    public void write(int primaryAddress, byte[] data) throws IOException {
         if (data == null) {
             data = new byte[0];
         }
@@ -278,10 +273,8 @@ public class MBusConnection implements AutoCloseable {
      * @throws IOException
      *             if any kind of error (including timeout) occurs while trying to read the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public void selectComponent(SecondaryAddress secondaryAddress) throws IOException, InterruptedIOException {
+    public void selectComponent(SecondaryAddress secondaryAddress) throws IOException {
         this.secondaryAddress = secondaryAddress;
         componentSelection(false);
     }
@@ -292,10 +285,8 @@ public class MBusConnection implements AutoCloseable {
      * @throws IOException
      *             if any kind of error (including timeout) occurs while trying to read the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public void deselectComponent() throws IOException, InterruptedIOException {
+    public void deselectComponent() throws IOException {
         if (secondaryAddress == null) {
             return;
         }
@@ -313,11 +304,8 @@ public class MBusConnection implements AutoCloseable {
      * @throws IOException
      *             if any kind of error (including timeout) occurs while trying to read the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public void selectForReadout(int primaryAddress, List<DataRecord> dataRecords)
-            throws IOException, InterruptedIOException {
+    public void selectForReadout(int primaryAddress, List<DataRecord> dataRecords) throws IOException {
         int i = 0;
         for (DataRecord dataRecord : dataRecords) {
             i += dataRecord.encode(dataRecordsAsBytes, i);
@@ -338,10 +326,8 @@ public class MBusConnection implements AutoCloseable {
      * @throws IOException
      *             if any kind of error (including timeout) occurs while trying to read the remote device. Note that the
      *             connection is not closed when an IOException is thrown.
-     * @throws InterruptedIOException
-     *             if no response at all (not even a single byte) was received from the meter within the timeout span.
      */
-    public void resetReadout(int primaryAddress) throws IOException, InterruptedIOException {
+    public void resetReadout(int primaryAddress) throws IOException {
         sendLongMessage(primaryAddress, 0x53, 0x50, 0, new byte[] {});
         MBusMessage mBusMessage = receiveMessage();
 
@@ -355,14 +341,10 @@ public class MBusConnection implements AutoCloseable {
      * 
      * @param primaryAddress
      *            the primary address of the meter to reset.
-     * @throws InterruptedIOException
-     *             if the slave does not answer with an 0xe5 message within the configured timeout span.
      * @throws IOException
      *             if an error occurs during the reset process.
-     * @throws InterruptedIOException
-     *             if the slave does not answer with an 0xe5 message within the configured timeout span.
      */
-    public void linkReset(int primaryAddress) throws IOException, InterruptedIOException {
+    public void linkReset(int primaryAddress) throws IOException {
         sendShortMessage(primaryAddress, 0x40);
         MBusMessage mBusMessage = receiveMessage();
 
@@ -373,7 +355,7 @@ public class MBusConnection implements AutoCloseable {
         frameCountBits[primaryAddress] = true;
     }
 
-    private void componentSelection(boolean deselect) throws IOException, InterruptedIOException {
+    private void componentSelection(boolean deselect) throws IOException {
         byte[] ba = secondaryAddressAsBa();
 
         // send select/deselect
@@ -470,7 +452,17 @@ public class MBusConnection implements AutoCloseable {
             if (receivedBytes[messageLength - 1] != STOP_BYTE) {
                 receivedBytes = readUntilStop(receivedBytes, messageLength);
             }
+            // skip undesired Calling Direction Frame (echo)
+            if ((receivedBytes[4] & 0x40) == 0x40) {
+                return receiveMessage();
+            }
 
+        }
+        else if ((b0 & 0xff) == 0x10) {
+            // skip undesired Short Frame (echo)
+            receivedBytes = new byte[4];
+            is.readFully(receivedBytes, 0, 4);
+            return receiveMessage();
         }
         else {
             throw new IOException(String.format("Received unknown message: %02X", b0));
