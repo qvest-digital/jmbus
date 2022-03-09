@@ -328,6 +328,7 @@ public class DataRecord {
                 int year = 1900 + 100 * yearh + year1 + year2;
 
                 calendar.set(year, mon - 1, day, hour, min, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
 
                 dataValue = calendar.getTime();
                 dataValueType = DataValueType.DATE;
@@ -361,6 +362,7 @@ public class DataRecord {
                 int year = 2001 + year1 + year2;
 
                 calendar.set(year, mon - 1, day, hour, min, sec);
+                calendar.set(Calendar.MILLISECOND, 0);
 
                 i++;
 

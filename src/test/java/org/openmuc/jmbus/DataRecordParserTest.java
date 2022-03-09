@@ -73,13 +73,24 @@ public class DataRecordParserTest {
     public Object testDataRecordsValues() throws DecodingException {
         /* e0000nnn Energy Wh */
         Object[] p1 = { "0407c81e0000", Description.ENERGY, DlmsUnit.WATT_HOUR, 4, 7880L };
+        /* extended Energy Wh */
+        Object[] p13 = { "04fb01c81e0000", Description.ENERGY, DlmsUnit.WATT_HOUR, 6, 7880L };
 
         /* e0001nnn Energy J */
+        Object[] p11 = { "040fc81e0000", Description.ENERGY, DlmsUnit.JOULE, 7, 7880L };
+        /* extended Energy J*/
+        Object[] p12 = { "04fb09c81e0000", Description.ENERGY, DlmsUnit.JOULE, 9, 7880L };
+
+        /* Energy BTU (TODO needs to be implemented) */
+        //        Object[] pxx = { "04863dc81e0000", Description.ENERGY, DlmsUnit.BTU, 3, 7880L };
+        /* Energy cal */
+        Object[] p14 = { "04fb0dc81e0000", Description.ENERGY, DlmsUnit.CALORIFIC_VALUE, 6, 7880L };
 
         /* e0010nnn Volume m^3 */
         Object[] p2 = { "0415febf0000", Description.VOLUME, DlmsUnit.CUBIC_METRE, -1, 49150L };
-
         Object[] p3 = { "844015f8bf0000", Description.VOLUME, DlmsUnit.CUBIC_METRE, -1, 49144L };
+        Object[] p15 = { "04fb21c81e0000", Description.VOLUME, DlmsUnit.CUBIC_FEET, -1, 7880L };
+        Object[] p16 = { "04fb22c81e0000", Description.VOLUME, DlmsUnit.US_GALLON, -1, 7880L };
 
         /* e0011nnn Mass kg */
 
@@ -102,11 +113,11 @@ public class DataRecordParserTest {
         Object[] p8 = { "0262d300", Description.TEMPERATURE_DIFFERENCE, DlmsUnit.KELVIN, -1, 211L };
 
         // /* e1101101 Date and time - type F */
-        Object[] p9 = { "046d2b117811", Description.DATE_TIME, null, 0, 1295887380035L };
+        Object[] p9 = { "046d2b117811", Description.DATE_TIME, null, 0, 1295887380000L };
 
         // /* e1101101 Date and time - type I */
-        Object[] p10 = { "066d221ae0100100", Description.DATE_TIME, null, 0, 979601194250L };
-        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10 };
+        Object[] p10 = { "066d221ae0100100", Description.DATE_TIME, null, 0, 979601194000L };
+        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16 };
     }
 
     @Test
@@ -124,7 +135,7 @@ public class DataRecordParserTest {
         Object dataValue = dataRecord.getDataValue();
 
         if (dataValue instanceof Date) {
-            assertEquals(data, ((Date) dataValue).getTime(), 100);
+            assertEquals((long) data, ((Date) dataValue).getTime());
         }
         else {
             assertEquals(data, dataValue);
