@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import org.openmuc.jmbus.HexUtils;
 import org.openmuc.jmbus.MBusConnection;
 import org.openmuc.jmbus.SecondaryAddress;
-import org.openmuc.jmbus.HexUtils;
 import org.openmuc.jmbus.internal.cli.CliParameter;
 import org.openmuc.jmbus.internal.cli.CliParameterBuilder;
 import org.openmuc.jmbus.internal.cli.CliParseException;
@@ -78,6 +78,10 @@ class ConsoleLineParser {
     private final IntCliParameter timeout = new CliParameterBuilder("-t").setDescription("The timeout in milliseconds.")
             .buildIntParameter("timeout", 3000);
 
+    private final IntCliParameter waitTime = new CliParameterBuilder("-wt")
+            .setDescription("Wait time between every message in milliseconds. Sometimes needed for slow devices.")
+            .buildIntParameter("waitTime", 0);
+
     private final IntCliParameter tcpConnectionTimeout = new CliParameterBuilder("-ct")
             .setDescription("The TCP connection timeout in milliseconds.")
             .buildIntParameter("connectionTimeout", 10000);
@@ -130,6 +134,7 @@ class ConsoleLineParser {
         commonParams.add(comPort);
         commonParams.add(baudRate);
         commonParams.add(timeout);
+        commonParams.add(waitTime);
         commonParams.add(verbose);
 
         List<CliParameter> readParams = new ArrayList<>();
@@ -187,8 +192,7 @@ class ConsoleLineParser {
                 CliConnection.write(this, (MBusConnection) builder.build(), cliPrinter);
                 break;
             case SCAN:
-                CliConnection.scan(this.wildcard.getValue(), secondaryScan.isSelected(),
-                        (MBusConnection) builder.build(), cliPrinter);
+                CliConnection.scan(this, (MBusConnection) builder.build(), cliPrinter);
                 break;
             case WMBUS:
                 WMBusConnection wmBusConnection = (WMBusConnection) builder.build();
@@ -304,6 +308,10 @@ class ConsoleLineParser {
         return timeout.getValue();
     }
 
+    public long getWaitTime() {
+        return waitTime.getValue();
+    }
+
     public int getConnectionTimeout() {
         return tcpConnectionTimeout.getValue();
     }
@@ -318,6 +326,10 @@ class ConsoleLineParser {
 
     public boolean isLinkResetDisabled() {
         return disableLinkReset.isSelected();
+    }
+
+    public boolean isSecondaryScan() {
+        return secondaryScan.isSelected();
     }
 
     public WMBusMode getWMBusMode() {

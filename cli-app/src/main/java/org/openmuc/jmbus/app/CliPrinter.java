@@ -48,9 +48,12 @@ public class CliPrinter {
         println(msg);
     }
 
-    private void println(Object[] msg) {
-        String string = msgToString(msg);
-        System.out.println(string);
+    public void printInfo(Object... msg) {
+        print(msg);
+    }
+
+    public void printlnInfo(Object... msg) {
+        println(msg);
     }
 
     private String msgToString(Object[] msg) {
@@ -66,16 +69,12 @@ public class CliPrinter {
         return sb.toString();
     }
 
-    public void printInfo(Object... msg) {
-        print(msg);
+    private void println(Object[] msg) {
+        System.out.println(msgToString(msg));
     }
 
     private void print(Object[] msg) {
-        String string = msgToString(msg);
-        System.out.print(string);
+        System.out.print(msgToString(msg));
     }
 
-    public void printlnInfo(Object... msg) {
-        println(msg);
-    }
 }

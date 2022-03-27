@@ -1,10 +1,23 @@
+v3.3.0 17-Jun-2020
+------------------
+- added configurable delay for slow devices
+  * in CLI-App
+  * in scan secondary address (minor api change)
+- added handling for serial echo, thanks to Mr. Timeus from Eurotech Spa
+- fixed bug with scaled values if value is null
+- fixed bug with big integer numbers
+- fixed bug with not encoded short header if encryption mode not supported
+  thanks to Mr. Gonen from pronit.com.tr
+- fixed AES_CBC_IV long header encoding,
+  thanks to Mr. Holz from Stadtwerke Greifswald GmbH
+
 v3.2.1 14-Jun-2019
 ------------------
  - removed DatatypeConverter for Java 8+ compatibility
  - fixed int16 negative value
  - fixed day light saving time bug
  - fixed typo in SecondaryAddress.newFromWMBusHeader
- - adds long header parameter for SecondaryAddress.newFromManufactureId
+ - added long header parameter for SecondaryAddress.newFromManufactureId
 
 v3.2.0 12-Nov-2018
 ------------------

@@ -334,8 +334,8 @@ public class DataRecord {
                 dataValueType = DataValueType.DATE;
             }
             else {
-                dataValue = Long.valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8)
-                        | ((buffer[i++] & 0xff) << 16) | ((buffer[i++] & 0xff) << 24));
+                dataValue = (long) ByteBuffer.wrap(buffer, i, 4).order(ByteOrder.LITTLE_ENDIAN).getInt();
+                i += 4;
                 dataValueType = DataValueType.LONG;
             }
             break;
@@ -371,23 +371,20 @@ public class DataRecord {
             }
             else if ((buffer[i + 5] & 0x80) == 0x80) {
                 // negative
-                dataValue = Long
-                        .valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8) | ((buffer[i++] & 0xff) << 16)
-                                | ((buffer[i++] & 0xff) << 24) | (((long) buffer[i++] & 0xff) << 32)
-                                | (((long) buffer[i++] & 0xff) << 40) | (0xffl << 48) | (0xffl << 56));
+                dataValue = Long.valueOf((buffer[i++] & 0xffL) | ((buffer[i++] & 0xffL) << 8)
+                        | ((buffer[i++] & 0xffL) << 16) | ((buffer[i++] & 0xffL) << 24) | ((buffer[i++] & 0xffL) << 32)
+                        | ((buffer[i++] & 0xffL) << 40) | (0xffL << 48) | (0xffL << 56));
             }
             else {
-                dataValue = Long.valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8)
-                        | ((buffer[i++] & 0xff) << 16) | ((buffer[i++] & 0xff) << 24)
-                        | (((long) buffer[i++] & 0xff) << 32) | (((long) buffer[i++] & 0xff) << 40));
+                dataValue = Long.valueOf((buffer[i++] & 0xffL) | ((buffer[i++] & 0xffL) << 8)
+                        | ((buffer[i++] & 0xffL) << 16) | ((buffer[i++] & 0xffL) << 24) | ((buffer[i++] & 0xffL) << 32)
+                        | ((buffer[i++] & 0xffL) << 40));
             }
             dataValueType = DataValueType.LONG;
             break;
         case 0x07: /* INT64 */
-            dataValue = Long.valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8) | ((buffer[i++] & 0xff) << 16)
-                    | ((buffer[i++] & 0xff) << 24) | (((long) buffer[i++] & 0xff) << 32)
-                    | (((long) buffer[i++] & 0xff) << 40) | (((long) buffer[i++] & 0xff) << 48)
-                    | (((long) buffer[i++] & 0xff) << 56));
+            dataValue = ByteBuffer.wrap(buffer, i, 8).order(ByteOrder.LITTLE_ENDIAN).getLong();
+            i += 8;
             dataValueType = DataValueType.LONG;
             break;
         case 0x09:
@@ -532,9 +529,14 @@ public class DataRecord {
      * @return the data (value) multiplied by the multiplier as a Double
      */
     public Double getScaledDataValue() {
-        try {
-            return ((Number) dataValue).doubleValue() * Math.pow(10, multiplierExponent);
-        } catch (ClassCastException e) {
+        if (dataValue != null) {
+            try {
+                return ((Number) dataValue).doubleValue() * Math.pow(10, multiplierExponent);
+            } catch (ClassCastException e) {
+                return null;
+            }
+        }
+        else {
             return null;
         }
     }
@@ -601,7 +603,7 @@ public class DataRecord {
         }
     }
 
-    private int decodeUserDefinedVif(byte[] buffer, int offset) throws DecodingException {
+    private int decodeUserDefinedVif(byte[] buffer, int offset) {
 
         int length = buffer[offset];
         StringBuilder sb = new StringBuilder();

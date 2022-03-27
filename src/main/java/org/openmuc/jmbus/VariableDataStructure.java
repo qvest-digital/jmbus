@@ -67,6 +67,8 @@ public class VariableDataStructure {
 
     private List<DataRecord> dataRecords;
 
+    private int ciField;
+
     public VariableDataStructure(byte[] buffer, int offset, int length, SecondaryAddress linkLayerSecondaryAddress,
             Map<SecondaryAddress, byte[]> keyMap) {
         this.buffer = buffer;
@@ -89,7 +91,7 @@ public class VariableDataStructure {
     public void decodeWithOffset(int offset) throws DecodingException {
         if (!decoded) {
             try {
-                int ciField = readUnsignedByte(buffer, offset);
+                ciField = readUnsignedByte(buffer, offset);
 
                 switch (ciField) {
                 case 0x72:
@@ -126,7 +128,7 @@ public class VariableDataStructure {
                     }
                     break;
 
-                case 0x8d: /* ELL */
+                case 0x8d: /* Extended Link Layer */
                     decodeExtendedLinkLayer(buffer, offset + 1); // 6 bytes header + CRC
                     header = Arrays.copyOfRange(buffer, offset, offset + 7); // don't include CRC
                     vdr = new byte[length - 7];
@@ -276,7 +278,7 @@ public class VariableDataStructure {
             mode7keyId = buffer[i++] & 0x0f;
         }
 
-        if (msgIsNotEnc(buffer, i)) {
+        if (msgIsNotEnc(buffer, i) || numberOfEncryptedBlocks == 0) {
             encryptionMode = EncryptionMode.NONE;
         }
         return i - offset;
@@ -448,10 +450,12 @@ public class VariableDataStructure {
     private void decryptAesCbcIv(byte[] key, final int len) throws DecodingException {
         byte[] iv = createIv();
         byte[] result = AesCrypt.newAesCrypt(key, iv).decrypt(this.vdr, len);
+
         if (!(result[0] == 0x2f && result[1] == 0x2f)) {
             throw new DecodingException(newDecyptionExceptionMsg());
         }
         System.arraycopy(result, 0, vdr, 0, len);
+
     }
 
     private void decryptAesCbcIv0(byte[] key, final int len) throws DecodingException {
@@ -518,6 +522,12 @@ public class VariableDataStructure {
         if (isLongHeader) {
             System.arraycopy(saBytes, 4, iv, 0, 2); // Manufacture
             System.arraycopy(saBytes, 0, iv, 2, 4); // Identification
+            System.arraycopy(saBytes, 6, iv, 6, 2); // Version and Device Type
+        }
+        else if (ciField == 0x72) {
+            saBytes = secondaryAddress.asByteArray();
+            System.arraycopy(saBytes, 0, iv, 2, 4); // Identification
+            System.arraycopy(saBytes, 4, iv, 0, 2); // Manufacture
             System.arraycopy(saBytes, 6, iv, 6, 2); // Version and Device Type
         }
         else {
