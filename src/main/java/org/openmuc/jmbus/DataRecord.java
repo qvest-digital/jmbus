@@ -8,7 +8,9 @@ package org.openmuc.jmbus;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.List;
 
 /**
  * Representation of a data record (sometimes called variable data block).
@@ -164,6 +166,50 @@ public class DataRecord {
         RESET_COUNTER;
     }
 
+    public enum DescriptionExtension {
+        PER_SECOND,
+        PER_MINUTE,
+        PER_HOUR,
+        PER_DAY,
+        PER_WEEK,
+        PER_MONTH,
+        PER_YEAR,
+        PER_REVOLUTION,
+        INCREMENT_PER_INPUT_PULSE_CH0,
+        INCREMENT_PER_INPUT_PULSE_CH1,
+        INCREMENT_PER_OUTPUT_PULSE_CH0,
+        INCREMENT_PER_OUTPUT_PULSE_CH1,
+        PER_LITER,
+        PER_CUBIC_METER,
+        PER_KILOGRAM,
+        PER_KELVIN,
+        PER_KILO_WATT_HOUR,
+        PER_GIGA_JOULE,
+        PER_KILO_WATT,
+        PER_KELVIN_LITER,
+        PER_VOLT,
+        PER_AMPERE,
+        MULTIPLIED_BY_SECOND,
+        MULTIPLIED_BY_SECOND_PER_VOLT,
+        MULTIPLIED_BY_SECOND_PER_AMPERE,
+        START_DATE,
+        UNCORRECTED_UNIT,
+        POSITIVE_ACCUMULATION,
+        NEGATIVE_ACCUMULATION,
+        BASE_CONDITION,
+        LOWER_LIMIT,
+        UPPER_LIMIT,
+        PHASE_L1,
+        PHASE_L2,
+        PHASE_L3,
+        NEUTRAL_CONDUCTOR,
+        PHASE_L1_L2,
+        PHASE_L2_L3,
+        PHASE_L3_L1,
+        DELTA,
+        ABSOLUTE,
+    }
+
     // // Data Information Block that contains a DIF and optionally up to 10 DIFEs
     private byte[] dib;
     // // Value Information Block that contains a VIF and optionally up to 10 VIFEs
@@ -183,6 +229,7 @@ public class DataRecord {
     // VIB fields:
     private Description description;
     private String userDefinedDescription;
+    private List<DescriptionExtension> descriptionExtensions = new ArrayList<>();
     private int multiplierExponent = 0;
     private DlmsUnit unit;
 
@@ -252,7 +299,152 @@ public class DataRecord {
 
         if (decodeFurtherVifs) {
             while ((buffer[i++] & 0x80) == 0x80) {
-                // TODO these vifes should not be ignored!
+                switch(buffer[i] & 0x7f) {
+                    case 0b010_0000:
+                        descriptionExtensions.add(DescriptionExtension.PER_SECOND);
+                        break;
+                    case 0b010_0001:
+                        descriptionExtensions.add(DescriptionExtension.PER_MINUTE);
+                        break;
+                    case 0b010_0010:
+                        descriptionExtensions.add(DescriptionExtension.PER_HOUR);
+                        break;
+                    case 0b010_0011:
+                        descriptionExtensions.add(DescriptionExtension.PER_DAY);
+                        break;
+                    case 0b010_0100:
+                        descriptionExtensions.add(DescriptionExtension.PER_WEEK);
+                        break;
+                    case 0b010_0101:
+                        descriptionExtensions.add(DescriptionExtension.PER_MONTH);
+                        break;
+                    case 0b010_0110:
+                        descriptionExtensions.add(DescriptionExtension.PER_YEAR);
+                        break;
+                    case 0b010_0111:
+                        descriptionExtensions.add(DescriptionExtension.PER_REVOLUTION);
+                        break;
+                    case 0b010_1000:
+                        descriptionExtensions.add(DescriptionExtension.INCREMENT_PER_INPUT_PULSE_CH0);
+                        break;
+                    case 0b010_1001:
+                        descriptionExtensions.add(DescriptionExtension.INCREMENT_PER_INPUT_PULSE_CH1);
+                        break;
+                    case 0b010_1010:
+                        descriptionExtensions.add(DescriptionExtension.INCREMENT_PER_OUTPUT_PULSE_CH0);
+                        break;
+                    case 0b010_1011:
+                        descriptionExtensions.add(DescriptionExtension.INCREMENT_PER_OUTPUT_PULSE_CH1);
+                        break;
+                    case 0b010_1100:
+                        descriptionExtensions.add(DescriptionExtension.PER_LITER);
+                        break;
+                    case 0b010_1101:
+                        descriptionExtensions.add(DescriptionExtension.PER_CUBIC_METER);
+                        break;
+                    case 0b010_1110:
+                        descriptionExtensions.add(DescriptionExtension.PER_KILOGRAM);
+                        break;
+                    case 0b010_1111:
+                        descriptionExtensions.add(DescriptionExtension.PER_KELVIN);
+                        break;
+                    case 0b011_0000:
+                        descriptionExtensions.add(DescriptionExtension.PER_KILO_WATT_HOUR);
+                        break;
+                    case 0b011_0001:
+                        descriptionExtensions.add(DescriptionExtension.PER_GIGA_JOULE);
+                        break;
+                    case 0b011_0010:
+                        descriptionExtensions.add(DescriptionExtension.PER_KILO_WATT);
+                        break;
+                    case 0b011_0011:
+                        descriptionExtensions.add(DescriptionExtension.PER_KELVIN_LITER);
+                        break;
+                    case 0b011_0100:
+                        descriptionExtensions.add(DescriptionExtension.PER_VOLT);
+                        break;
+                    case 0b011_0101:
+                        descriptionExtensions.add(DescriptionExtension.PER_AMPERE);
+                        break;
+                    case 0b011_0110:
+                        descriptionExtensions.add(DescriptionExtension.MULTIPLIED_BY_SECOND);
+                        break;
+                    case 0b011_0111:
+                        descriptionExtensions.add(DescriptionExtension.MULTIPLIED_BY_SECOND_PER_VOLT);
+                        break;
+                    case 0b011_1000:
+                        descriptionExtensions.add(DescriptionExtension.MULTIPLIED_BY_SECOND_PER_AMPERE);
+                        break;
+                    case 0b011_1001:
+                        descriptionExtensions.add(DescriptionExtension.START_DATE);
+                        break;
+                    case 0b011_1010:
+                        descriptionExtensions.add(DescriptionExtension.UNCORRECTED_UNIT);
+                        break;
+                    case 0b011_1011:
+                        descriptionExtensions.add(DescriptionExtension.POSITIVE_ACCUMULATION);
+                        break;
+                    case 0b011_1100:
+                        descriptionExtensions.add(DescriptionExtension.NEGATIVE_ACCUMULATION);
+                        break;
+                    case 0b011_1110:
+                        descriptionExtensions.add(DescriptionExtension.BASE_CONDITION);
+                        break;
+                    case 0b100_0000:
+                        descriptionExtensions.add(DescriptionExtension.LOWER_LIMIT);
+                        break;
+                    case 0b100_1000:
+                        descriptionExtensions.add(DescriptionExtension.UPPER_LIMIT);
+                        break;
+                    case 0b111_0000:
+                    case 0b111_0001:
+                    case 0b111_0010:
+                    case 0b111_0011:
+                    case 0b111_0100:
+                    case 0b111_0101:
+                    case 0b111_0110:
+                    case 0b111_0111:
+                        multiplierExponent += -6 + (buffer[i] & 0x7);
+                        break;
+                    case 0b111_1101:
+                        multiplierExponent += 3;
+                        break;
+                    case 0b111_1111:
+                    case 0b111_1100:
+                        if ((buffer[i] & 0x80) > 0) {
+                            switch (buffer[i + 1] & 0x7f) {
+                                case 0b000_0001:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L1);
+                                    break;
+                                case 0b000_0010:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L2);
+                                    break;
+                                case 0b000_0011:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L3);
+                                    break;
+                                case 0b000_0100:
+                                    descriptionExtensions.add(DescriptionExtension.NEUTRAL_CONDUCTOR);
+                                    break;
+                                case 0b000_0101:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L1_L2);
+                                    break;
+                                case 0b000_0110:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L2_L3);
+                                    break;
+                                case 0b000_0111:
+                                    descriptionExtensions.add(DescriptionExtension.PHASE_L3_L1);
+                                    break;
+                                case 0b000_1100:
+                                    descriptionExtensions.add(DescriptionExtension.DELTA);
+                                    break;
+                                case 0b001_000:
+                                    descriptionExtensions.add(DescriptionExtension.ABSOLUTE);
+                                    break;
+                            }
+                            i++;
+                        }
+                        break;
+                }
             }
         }
 
@@ -566,6 +758,10 @@ public class DataRecord {
         else {
             return description.toString();
         }
+    }
+
+    public List<DescriptionExtension> getDescriptionExtensions() {
+        return descriptionExtensions;
     }
 
     /**
