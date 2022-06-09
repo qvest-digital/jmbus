@@ -284,7 +284,7 @@ public class DataRecord {
             }
         }
         else if (vif == 0xfd) {
-            if(buffer[i] == 0xfd){
+            if((buffer[i] & 0xff) == 0xfd){
                 decodeMainExtendedVif2ndLevel(buffer[i+1]);
                 i++;
             } else {
