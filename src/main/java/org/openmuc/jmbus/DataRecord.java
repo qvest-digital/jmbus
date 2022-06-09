@@ -284,7 +284,12 @@ public class DataRecord {
             }
         }
         else if (vif == 0xfd) {
-            decodeMainExtendedVif(buffer[i]);
+            if(buffer[i] == 0xfd){
+                decodeMainExtendedVif2ndLevel(buffer[i+1]);
+                i++;
+            } else {
+                decodeMainExtendedVif(buffer[i]);
+            }
             if ((buffer[i] & 0x80) == 0x80) {
                 decodeFurtherVifs = true;
             }
@@ -1282,12 +1287,18 @@ public class DataRecord {
         else if ((vif & 0x7f) == 0x76) { // E111 0110
             description = Description.MANUFACTURER_SPECIFIC;
         }
-        else if ((vif & 0x7f) == 0x7d) { // E111 1101
+        else if ((vif & 0x7f) >= 0x77) { // E111 0111 - E111 1111
+            description = Description.RESERVED;
+        }
+        else {
+            description = Description.NOT_SUPPORTED;
+        }
+    }
+    // implements second level 0xfd
+    private void decodeMainExtendedVif2ndLevel(byte vif) throws DecodingException {
+        if((vif & 0x7f) == 0x02) { // E000 0010
             description = Description.REMAINING_BATTERY_LIFE_TIME;
             unit = DlmsUnit.MONTH;
-        }
-        else if ((vif & 0x7f) >= 0x77) { // E111 0111 - E111 1111 (except E111 1101)
-            description = Description.RESERVED;
         }
         else {
             description = Description.NOT_SUPPORTED;
