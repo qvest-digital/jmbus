@@ -119,7 +119,10 @@ public class DataRecordParserTest {
 
         // /* e1101101 Date and time - type I */
         Object[] p10 = { "066d221ae0100100", Description.DATE_TIME, null, 0, 979601194000L };
-        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16 };
+
+        // /* e111_1101 Remaining battery life time in months */
+        Object[] p17 = { "02fdfd02b400", Description.REMAINING_BATTERY_LIFE_TIME, DlmsUnit.MONTH, 0, 180L };
+        return new Object[] { p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15, p16, p17 };
     }
 
     @Test
