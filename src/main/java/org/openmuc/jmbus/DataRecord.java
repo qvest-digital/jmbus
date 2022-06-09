@@ -129,12 +129,12 @@ public class DataRecord {
         USER_DEFINED,
         APPARENT_ENERGY,
         CUSTOMER_LOCATION,
-        ACCSESS_CODE_OPERATOR,
-        ACCSESS_CODE_USER,
+        ACCESS_CODE_OPERATOR,
+        ACCESS_CODE_USER,
         PASSWORD,
-        ACCSESS_CODE_SYSTEM_DEVELOPER,
+        ACCESS_CODE_SYSTEM_DEVELOPER,
         OTHER_SOFTWARE_VERSION,
-        ACCSESS_CODE_SYSTEM_OPERATOR,
+        ACCESS_CODE_SYSTEM_OPERATOR,
         ERROR_MASK,
         SECURITY_KEY,
         DIGITAL_INPUT,
@@ -1125,16 +1125,16 @@ public class DataRecord {
             description = Description.CUSTOMER;
         }
         else if ((vif & 0x7f) == 0x12) { // E001 0010
-            description = Description.ACCSESS_CODE_USER;
+            description = Description.ACCESS_CODE_USER;
         }
         else if ((vif & 0x7f) == 0x13) { // E001 0011
-            description = Description.ACCSESS_CODE_OPERATOR;
+            description = Description.ACCESS_CODE_OPERATOR;
         }
         else if ((vif & 0x7f) == 0x14) { // E001 0100
-            description = Description.ACCSESS_CODE_SYSTEM_OPERATOR;
+            description = Description.ACCESS_CODE_SYSTEM_OPERATOR;
         }
         else if ((vif & 0x7f) == 0x15) { // E001 0101
-            description = Description.ACCSESS_CODE_SYSTEM_DEVELOPER;
+            description = Description.ACCESS_CODE_SYSTEM_DEVELOPER;
         }
         else if ((vif & 0x7f) == 0x16) { // E001 0110
             description = Description.PASSWORD;
@@ -1282,7 +1282,11 @@ public class DataRecord {
         else if ((vif & 0x7f) == 0x76) { // E111 0110
             description = Description.MANUFACTURER_SPECIFIC;
         }
-        else if ((vif & 0x7f) >= 0x77) { // E111 0111 - E111 1111
+        else if ((vif & 0x7f) == 0x7d) { // E111 1101
+            description = Description.REMAINING_BATTERY_LIFE_TIME;
+            unit = DlmsUnit.MONTH;
+        }
+        else if ((vif & 0x7f) >= 0x77) { // E111 0111 - E111 1111 (except E111 1101)
             description = Description.RESERVED;
         }
         else {
