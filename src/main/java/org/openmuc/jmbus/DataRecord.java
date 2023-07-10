@@ -581,7 +581,7 @@ public class DataRecord {
             break;
         case 0x07: /* INT64 */
             dataValue = Long.valueOf((buffer[i++] & 0xff) | ((buffer[i++] & 0xff) << 8) | ((buffer[i++] & 0xff) << 16)
-                    | ((buffer[i++] & 0xff) << 24) | (((long) buffer[i++] & 0xff) << 32)
+                    | (((long) buffer[i++] & 0xff) << 24) | (((long) buffer[i++] & 0xff) << 32)
                     | (((long) buffer[i++] & 0xff) << 40) | (((long) buffer[i++] & 0xff) << 48)
                     | (((long) buffer[i++] & 0xff) << 56));
             dataValueType = DataValueType.LONG;

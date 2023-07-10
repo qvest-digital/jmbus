@@ -46,15 +46,16 @@ public class DataRecordParserTest {
         return (Long) obj;
     }
 
-    public Object testINT32Data() {
+    public Object testINTData() {
         Object[] p1 = { HexUtils.hexToBytes("0403e4050000"), 1508L };
         Object[] p2 = { HexUtils.hexToBytes("0403ffffffff"), -1L };
-        return new Object[] { p1, p2 };
+        Object[] p3 = { HexUtils.hexToBytes("0700f4f640fc01000000"), 8527083252L };
+        return new Object[] { p1, p2, p3 };
     }
 
     @Test
-    @Parameters(method = "testINT32Data")
-    public void testINT32(byte[] bytes, long expectedVal) throws Exception {
+    @Parameters(method = "testINTData")
+    public void testINT(byte[] bytes, long expectedVal) throws Exception {
 
         DataRecord dataRecord = new DataRecord();
 
