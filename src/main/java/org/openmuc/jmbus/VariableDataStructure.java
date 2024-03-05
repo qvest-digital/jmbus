@@ -116,6 +116,9 @@ public class VariableDataStructure {
                     else if ((vdr[0] & 0xff) == 0x79) {
                         decodeShortFrame(vdr, offset + 1, length - headLen0x8c);
                     }
+                    else if ((vdr[0] & 0xff) == 0x7a) {
+                        decodeWithShortHeader(offset + headLen0x8c + 1);
+                    }
                     else if ((vdr[0] & 0xff) == 0x90) {
                         int bytesRead = decodeAFL(buffer, offset+1+headLen0x8c+1);
                         headerLen += bytesRead;
